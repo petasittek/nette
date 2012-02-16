@@ -51,8 +51,8 @@ class TestCase
 	/** @var resource */
 	private $proc;
 
-	/** @var array */
-	private $pipes = array();
+	/** @var resource */
+	private $stdout;
 
 	/** @var array */
 	private static $cachedPhp;
@@ -154,7 +154,11 @@ class TestCase
 			array('pipe', 'w'),
 		);
 
-		$this->proc = proc_open($this->cmdLine, $descriptors, $this->pipes, dirname($this->file), null, array('bypass_shell' => true));
+		$this->proc = proc_open($this->cmdLine, $descriptors, $pipes, dirname($this->file), null, array('bypass_shell' => true));
+		list($stdin, $this->stdout, $stderr) = $pipes;
+		fclose($stdin);
+		stream_set_blocking($this->stdout, false);
+		fclose($stderr);
 	}
 
 
@@ -164,6 +168,7 @@ class TestCase
 	 * @return bool
 	 */
 	public function isReady() {
+		$this->output .= stream_get_contents($this->stdout);
 		$status = proc_get_status($this->proc);
 		return !$status['running'];
 	}
@@ -175,11 +180,8 @@ class TestCase
 	 * @return void
 	 */
 	public function collect() {
-		list($stdin, $stdout, $stderr) = $this->pipes;
-		$this->output = stream_get_contents($stdout);
-		fclose($stdin);
-		fclose($stdout);
-		fclose($stderr);
+		$this->output .= stream_get_contents($this->stdout);
+		fclose($this->stdout);
 		$res = proc_close($this->proc);
 
 		if ($this->phpType === 'CGI') {
