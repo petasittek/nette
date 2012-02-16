@@ -23,7 +23,7 @@ require __DIR__ . '/TestHelpers.php';
  */
 class TestRunner
 {
-	/** waiting time between runs in milliseconds */
+	/** waiting time between runs in microseconds */
 	const RUN_USLEEP = 10000;
 	
 	/** @var string  path to test file/directory */
@@ -78,8 +78,8 @@ class TestRunner
 		}
 
 		$running = array();
-		TestHelpers::purge(__DIR__ . '/tmp');
-		while ($tests) {
+		TestHelpers::purge(__DIR__ . '/../tmp');
+		while ($tests || $running) {
 			for ($i = count($running); $tests && $i < $this->jobs; $i++) {
 				$entry = array_shift($tests);
 				$count++;
@@ -96,7 +96,7 @@ class TestRunner
 				usleep(self::RUN_USLEEP); // stream_select() doesn't work with proc_open()
 			}
 			foreach ($running as $entry => $testCase) {
-				if (count($running) <= 1 || $testCase->isReady()) {
+				if ($this->jobs == 1 || count($running) + count($tests) <= 1 || $testCase->isReady()) {
 					try {
 						$testCase->collect();
 						$this->out('.');
